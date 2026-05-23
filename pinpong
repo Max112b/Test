@@ -1,46 +1,60 @@
 import pygame
 import sys
+import os
+
+try:
+    os.environ['SDL_VIDEO_WINDOW_POS'] = '100,100'
+except:
+    pass
 
 pygame.init()
 
 WIDTH = 800
 HEIGHT = 600
 
+# Цвета
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 LIGHT_BLUE = (173, 216, 230)
-GREEN = (0, 255, 0)
+BLUE = (0, 100, 255)
+RED = (255, 50, 50)
+GOLD = (255, 215, 0)
 
+# Создание отдельного окна
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Ping-Pong")
+pygame.display.set_caption("Пинг-понг")
+
 clock = pygame.time.Clock()
 
+# Размеры
 PADDLE_W = 15
 PADDLE_H = 100
-BALL_SIZE = 15
+BALL_SIZE = 18
 
+# Начальные позиции
 left_paddle_y = HEIGHT // 2 - PADDLE_H // 2
 right_paddle_y = HEIGHT // 2 - PADDLE_H // 2
-ball_x = WIDTH // 2
-ball_y = HEIGHT // 2
+ball_x = WIDTH // 2 - BALL_SIZE // 2
+ball_y = HEIGHT // 2 - BALL_SIZE // 2
 ball_dx = 5
 ball_dy = 5
 
-left_score = 0
-right_score = 0
-game_over = False
-
+PADDLE_SPEED = 7
 left_speed = 0
 right_speed = 0
-PADDLE_SPEED = 7
 
-while True:
+game_over = False
+winner = ""
+
+running = True
+while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
+            running = False
         
         if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                running = False
             if event.key == pygame.K_w:
                 left_speed = -PADDLE_SPEED
             if event.key == pygame.K_s:
@@ -51,10 +65,9 @@ while True:
                 right_speed = PADDLE_SPEED
             if event.key == pygame.K_SPACE and game_over:
                 game_over = False
-                left_score = 0
-                right_score = 0
-                ball_x = WIDTH // 2
-                ball_y = HEIGHT // 2
+                winner = ""
+                ball_x = WIDTH // 2 - BALL_SIZE // 2
+                ball_y = HEIGHT // 2 - BALL_SIZE // 2
                 ball_dx = 5
                 ball_dy = 5
                 left_paddle_y = HEIGHT // 2 - PADDLE_H // 2
@@ -67,10 +80,11 @@ while True:
                 right_speed = 0
     
     if not game_over:
+        # Движение ракеток
         left_paddle_y += left_speed
         right_paddle_y += right_speed
         
-
+        # Ограничения
         if left_paddle_y < 0:
             left_paddle_y = 0
         if left_paddle_y + PADDLE_H > HEIGHT:
@@ -81,90 +95,78 @@ while True:
         if right_paddle_y + PADDLE_H > HEIGHT:
             right_paddle_y = HEIGHT - PADDLE_H
         
-
+        # Движение мяча
         ball_x += ball_dx
         ball_y += ball_dy
         
-
+        # Отскок от верха и низа
         if ball_y <= 0 or ball_y + BALL_SIZE >= HEIGHT:
             ball_dy = -ball_dy
         
-  
-
+        # Отскок от ракеток
         if ball_x <= 50 + PADDLE_W and ball_y + BALL_SIZE >= left_paddle_y and ball_y <= left_paddle_y + PADDLE_H:
             if ball_dx < 0:
                 ball_dx = -ball_dx
-                if abs(ball_dx) < 15:
-                    ball_dx *= 1.1
         
-
-        if ball_x + BALL_SIZE >= WIDTH - 50 - PADDLE_W and ball_y + BALL_SIZE >= right_paddle_y and ball_y <= right_paddle_y + PADDLE_H:
+        if ball_x + BALL_SIZE >= WIDTH - 65 - PADDLE_W and ball_y + BALL_SIZE >= right_paddle_y and ball_y <= right_paddle_y + PADDLE_H:
             if ball_dx > 0:
                 ball_dx = -ball_dx
-                if abs(ball_dx) < 15:
-                    ball_dx *= 1.1
         
-        # Гол
+        # Конец игры
         if ball_x <= 0:
-            right_score += 1
-            if right_score >= 5:
-                game_over = True
-            else:
-                ball_x = WIDTH // 2
-                ball_y = HEIGHT // 2
-                ball_dx = 5
-                ball_dy = 5
+            game_over = True
+            winner = "КРАСНЫЙ ПОБЕДИЛ!"
         
         if ball_x + BALL_SIZE >= WIDTH:
-            left_score += 1
-            if left_score >= 5:
-                game_over = True
-            else:
-                ball_x = WIDTH // 2
-                ball_y = HEIGHT // 2
-                ball_dx = -5
-                ball_dy = 5
+            game_over = True
+            winner = "СИНИЙ ПОБЕДИЛ!"
     
-
-    screen.fill(LIGHT_BLUE)
-    
-  
-    pygame.draw.line(screen, BLACK, (WIDTH // 2, 0), (WIDTH // 2, HEIGHT), 2)
-    
-
-    pygame.draw.rect(screen, WHITE, (50, left_paddle_y, PADDLE_W, PADDLE_H))
-    pygame.draw.rect(screen, BLACK, (50, left_paddle_y, PADDLE_W, PADDLE_H), 3)
-    
-    pygame.draw.rect(screen, WHITE, (WIDTH - 65, right_paddle_y, PADDLE_W, PADDLE_H))
-    pygame.draw.rect(screen, BLACK, (WIDTH - 65, right_paddle_y, PADDLE_W, PADDLE_H), 3)
-    
-
-    pygame.draw.rect(screen, GREEN, (ball_x, ball_y, BALL_SIZE, BALL_SIZE))
-    pygame.draw.rect(screen, BLACK, (ball_x, ball_y, BALL_SIZE, BALL_SIZE), 2)
-    
-    # Счет
-    try:
-        font = pygame.font.Font(None, 36)
-        left_text = font.render(str(left_score), True, BLACK)
-        right_text = font.render(str(right_score), True, BLACK)
-        screen.blit(left_text, (WIDTH // 2 - 100, 20))
-        screen.blit(right_text, (WIDTH // 2 + 70, 20))
-    except:
-        pass
-    
-
-    if game_over:
-        screen.fill(WHITE)
+    # Отрисовка
+    if not game_over:
+        screen.fill(LIGHT_BLUE)
+        
+        pygame.draw.line(screen, BLACK, (WIDTH // 2, 0), (WIDTH // 2, HEIGHT), 2)
+        
+        pygame.draw.rect(screen, BLUE, (50, left_paddle_y, PADDLE_W, PADDLE_H))
+        pygame.draw.rect(screen, BLACK, (50, left_paddle_y, PADDLE_W, PADDLE_H), 3)
+        
+        pygame.draw.rect(screen, RED, (WIDTH - 65, right_paddle_y, PADDLE_W, PADDLE_H))
+        pygame.draw.rect(screen, BLACK, (WIDTH - 65, right_paddle_y, PADDLE_W, PADDLE_H), 3)
+        
+        center_x = int(ball_x + BALL_SIZE // 2)
+        center_y = int(ball_y + BALL_SIZE // 2)
+        pygame.draw.circle(screen, WHITE, (center_x, center_y), BALL_SIZE // 2)
+        pygame.draw.circle(screen, BLACK, (center_x, center_y), BALL_SIZE // 2, 2)
+    else:
+        # Экран победы
+        screen.fill(BLACK)
+        
+        pygame.draw.rect(screen, GOLD, (50, 100, WIDTH - 100, HEIGHT - 200), 5)
+        
         try:
-            font = pygame.font.Font(None, 36)
-            if left_score >= 5:
-                msg = "Left wins! Press SPACE"
-            else:
-                msg = "Right wins! Press SPACE"
-            text = font.render(msg, True, BLACK)
-            screen.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2))
+            title_font = pygame.font.Font(None, 72)
+            title = title_font.render("ИГРА ОКОНЧЕНА", True, GOLD)
+            screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 150))
+            
+            winner_font = pygame.font.Font(None, 64)
+            winner_text = winner_font.render(winner, True, WHITE)
+            screen.blit(winner_text, (WIDTH // 2 - winner_text.get_width() // 2, 280))
+            
+            info_font = pygame.font.Font(None, 36)
+            info_text = info_font.render("SPACE - новая игра, ESC - выход", True, GOLD)
+            screen.blit(info_text, (WIDTH // 2 - info_text.get_width() // 2, 400))
+            
+            hint_font = pygame.font.Font(None, 28)
+            hint1 = hint_font.render("Синий игрок: W/S", True, BLUE)
+            hint2 = hint_font.render("Красный игрок: UP/DOWN", True, RED)
+            screen.blit(hint1, (WIDTH // 2 - hint1.get_width() // 2, 470))
+            screen.blit(hint2, (WIDTH // 2 - hint2.get_width() // 2, 500))
+            
         except:
             pass
     
     pygame.display.flip()
     clock.tick(60)
+
+pygame.quit()
+sys.exit()
